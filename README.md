@@ -63,6 +63,8 @@ All data is exchanged in JSON format.
 repositories {
     maven { url 'https://jitpack.io' }
 }
+```
+## 
 dependencies {
     implementation 'com.github.Mayshabat:ui-state-replay-sdk:v1.0.0'
 }
