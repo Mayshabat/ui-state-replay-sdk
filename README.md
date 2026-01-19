@@ -113,9 +113,9 @@ The repository includes a demo Android application that demonstrates:
 - UX and product behavior analysis
 - QA automation support
 - Developer tooling and SDK research
-- 
+ 
 ### 📋 Requirements
 
-Android API 24+
-Kotlin
-Internet permission
+- Android API 24+
+- Kotlin
+- Internet permission
