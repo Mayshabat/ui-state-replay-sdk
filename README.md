@@ -119,3 +119,10 @@ The repository includes a demo Android application that demonstrates:
 - Android API 24+
 - Kotlin
 - Internet permission
+  
+### Running the Backend Locally (Optional)
+```kotlin
+cd server
+pip install -r requirements.txt
+python app.py
+```
