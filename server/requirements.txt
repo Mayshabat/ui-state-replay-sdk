@@ -1,0 +1,7 @@
+flask
+pymongo
+dnspython
+gunicorn
+flask-cors
+
+ 
