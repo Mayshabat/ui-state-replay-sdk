@@ -107,9 +107,15 @@ The repository includes a demo Android application that demonstrates:
 - Fetching a recorded session
 - Replaying the flow with visual highlights and automatic navigation
 
-### 🎯 Use Cases
+###  Use Cases
 - Debugging complex UI flows
 - Reproducing hard-to-catch bugs
 - UX and product behavior analysis
 - QA automation support
 - Developer tooling and SDK research
+- 
+### 📋 Requirements
+
+Android API 24+
+Kotlin
+Internet permission
