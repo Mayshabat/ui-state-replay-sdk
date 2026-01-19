@@ -16,6 +16,7 @@ import com.example.replaysdk.replay.Session
 import com.example.uistatereplaysdk.ui.theme.UIStateReplaySDKTheme
 import kotlinx.coroutines.launch
 import androidx.compose.material3.CenterAlignedTopAppBar
+import org.json.JSONObject
 
 // Simple screens for the demo
 sealed class DemoScreen {
@@ -29,7 +30,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Replay.init("http://ui-state-replay-sdk.onrender.com/") // emulator -> host machine
+        // Cloud base URL (Render)
+        Replay.init("https://ui-state-replay-sdk.onrender.com/")
 
         enableEdgeToEdge()
         setContent {
@@ -41,12 +43,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DemoApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
-    var sessionIdInput by remember { mutableStateOf("") }
 
     // -------------------------
     // App state
@@ -62,11 +64,8 @@ fun DemoApp() {
     var lastResponse by remember { mutableStateOf<String?>(null) }
     var isReplaying by remember { mutableStateOf(false) }
 
-    // -------------------------
-    // Replay UI feedback (visual)
-    // -------------------------
+    // Banner text (replay status / current event)
     var replayLabel by remember { mutableStateOf<String?>(null) }
-
 
     // Highlight state (for "glow" during replay)
     var highlightKey by remember { mutableStateOf<String?>(null) }
@@ -110,6 +109,7 @@ fun DemoApp() {
                     isRecording = true
                     lastSession = null
                     lastResponse = null
+                    replayLabel = null
                     Toast.makeText(context, "Recording started", Toast.LENGTH_SHORT).show()
                 },
                 onStopUpload = {
@@ -121,7 +121,17 @@ fun DemoApp() {
                         try {
                             val response = Replay.upload(session)
                             lastResponse = response
-                            Toast.makeText(context, "Uploaded ✓", Toast.LENGTH_SHORT).show()
+
+                            // Optional: extract sessionId for debugging/logs (not shown in UI)
+                            val id = runCatching {
+                                JSONObject(response).getString("sessionId")
+                            }.getOrNull()
+
+                            if (id != null) {
+                                Toast.makeText(context, "Uploaded ✓ id: $id", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Uploaded ✓", Toast.LENGTH_SHORT).show()
+                            }
                         } catch (e: Exception) {
                             e.printStackTrace()
                             Toast.makeText(context, "Upload failed", Toast.LENGTH_SHORT).show()
@@ -136,26 +146,17 @@ fun DemoApp() {
 
                     scope.launch {
                         isReplaying = true
-
+                        replayLabel = "REPLAYING..."
                         highlightKey = null
+
+                        // Reset to known state before replay
+                        resetDemo()
 
                         Toast.makeText(context, "Replay started", Toast.LENGTH_SHORT).show()
 
-//                        // reset to known state before replay
-//                        resetDemo()
-                        // איפוס למצב ידוע לפני ריפליי
-                        screen = DemoScreen.Login
-                        cart = emptyList()
                         Replay.replay(session, delayMs = 650) { e ->
-//                            // Update visual feedback
-//                            replayLabel = "${e.type} → ${e.screen}"
-//                            highlightKey = when (e.type) {
-//                                "NAVIGATE" -> "nav_${e.screen}"       // nav_Shop / nav_Checkout
-//                                "OPEN_PRODUCT" -> "open_${e.screen}"  // open_p1
-//                                "ADD_TO_CART" -> "add_${e.screen}"    // add_p1
-//                                "RESET" -> "reset"
-//                                else -> null
-//                            }
+                            replayLabel = "${e.type} → ${e.screen}"
+
                             when (e.type) {
                                 "NAVIGATE" -> {
                                     flash("nav_${e.screen}")
@@ -175,20 +176,20 @@ fun DemoApp() {
 
                                 "ADD_TO_CART" -> {
                                     // e.screen holds productId
-                                    flash("open_${e.screen}")
+                                    flash("add_${e.screen}")
                                     cart = cart + e.screen
                                 }
 
                                 "RESET" -> {
                                     flash("reset")
-                                    screen = DemoScreen.Login
-                                    cart = emptyList()
+                                    resetDemo()
                                 }
                             }
                         }
 
                         isReplaying = false
                         highlightKey = null
+                        replayLabel = null
                         Toast.makeText(context, "Replay finished", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -227,7 +228,6 @@ fun DemoApp() {
                     onGoCheckout = { navigate(DemoScreen.Checkout, "Checkout") }
                 )
 
-
                 is DemoScreen.Product -> ProductScreen(
                     product = findProduct(s.productId),
                     highlightKey = highlightKey,
@@ -235,7 +235,6 @@ fun DemoApp() {
                     onBackToShop = { navigate(DemoScreen.Shop, "Shop") },
                     onGoCheckout = { navigate(DemoScreen.Checkout, "Checkout") }
                 )
-
 
                 DemoScreen.Checkout -> CheckoutScreen(
                     items = cart.map { findProduct(it) },
@@ -246,7 +245,6 @@ fun DemoApp() {
                         resetDemo()
                     }
                 )
-
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -255,96 +253,8 @@ fun DemoApp() {
                 text = "Last response: ${lastResponse ?: "none"}",
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-            Spacer(Modifier.height(12.dp))
 
-            Text("Replay from server (Option 3)", modifier = Modifier.padding(horizontal = 16.dp))
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = sessionIdInput,
-                onValueChange = { sessionIdInput = it },
-                label = { Text("Paste sessionId") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = {
-                    if (sessionIdInput.isBlank()) {
-                        Toast.makeText(context, "Enter sessionId", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-
-                    scope.launch {
-                        try {
-                            isReplaying = true
-                            replayLabel = "FETCHING..."
-                            highlightKey = null
-
-                            // 1) fetch session from server
-                            val fetched = Replay.fetch(sessionIdInput.trim())
-
-                            // 2) reset UI state
-                            screen = DemoScreen.Login
-                            cart = emptyList()
-
-                            replayLabel = "REPLAYING..."
-
-                            // 3) run replay (same switch you already wrote)
-                            Replay.replay(fetched, delayMs = 650) { e ->
-                                replayLabel = "${e.type} → ${e.screen}"
-
-                                when (e.type) {
-                                    "NAVIGATE" -> {
-                                        highlightKey = "nav_${e.screen}"
-                                        screen = when (e.screen) {
-                                            "Login" -> DemoScreen.Login
-                                            "Shop" -> DemoScreen.Shop
-                                            "Checkout" -> DemoScreen.Checkout
-                                            else -> screen
-                                        }
-                                    }
-
-                                    "OPEN_PRODUCT" -> {
-                                        highlightKey = "open_${e.screen}"
-                                        screen = DemoScreen.Product(e.screen)
-                                    }
-
-                                    "ADD_TO_CART" -> {
-                                        highlightKey = "add_${e.screen}"
-                                        cart = cart + e.screen
-                                    }
-
-                                    "RESET" -> {
-                                        highlightKey = "reset"
-                                        screen = DemoScreen.Login
-                                        cart = emptyList()
-                                    }
-                                }
-                            }
-
-                            isReplaying = false
-                            highlightKey = null
-                            replayLabel = null
-                            Toast.makeText(context, "Fetch+Replay done ✓", Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
-                            isReplaying = false
-                            replayLabel = null
-                            e.printStackTrace()
-                            Toast.makeText(context, "Fetch failed", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("Fetch & Replay")
-            }
-
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
@@ -434,9 +344,7 @@ fun ShopScreen(
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Text("Cart: ")
             BadgedBox(
-                badge = {
-                    if (cartCount > 0) Badge { Text(cartCount.toString()) }
-                }
+                badge = { if (cartCount > 0) Badge { Text(cartCount.toString()) } }
             ) {
                 Text("🛒")
             }
@@ -453,7 +361,7 @@ fun ShopScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
                         Text(p.name, style = MaterialTheme.typography.titleMedium)
@@ -481,7 +389,6 @@ fun ShopScreen(
         }
     }
 }
-
 
 @Composable
 fun ProductScreen(
@@ -532,7 +439,6 @@ fun ProductScreen(
         }
     }
 }
-
 
 @Composable
 fun CheckoutScreen(
