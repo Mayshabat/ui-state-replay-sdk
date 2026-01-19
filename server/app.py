@@ -114,6 +114,13 @@ def delete_session(session_id):
 
     return jsonify({"deleted": False, "error": "Session not found"}), 404
 
+@app.route("/routes", methods=["GET"])
+def routes():
+    return jsonify(sorted([
+        {"rule": r.rule, "methods": sorted(list(r.methods))}
+        for r in app.url_map.iter_rules()
+    ], key=lambda x: x["rule"])), 200
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
