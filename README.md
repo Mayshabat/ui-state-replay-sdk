@@ -1,2 +1,68 @@
-# ui-state-replay-sdk
-Android SDK for recording and replaying UI state events for debugging and UX analysis.
+# UI State Replay SDK
+
+UI State Replay SDK is an Android SDK that allows developers to **record, store, and replay user interface interactions** without video recording.  
+The SDK captures structured UI events (such as navigation, clicks, and screen transitions), uploads them to a cloud backend, and enables deterministic replay for debugging, UX analysis, and bug reproduction.
+
+---
+
+## ✨ Features
+
+- Record UI events (navigation, actions, screen changes)
+- Upload sessions to a cloud backend
+- Retrieve recorded sessions from the server
+- Replay user flows with automatic navigation and visual highlights
+- No video recording
+- No personal user data
+- Lightweight and developer-friendly integration
+
+---
+
+## 🧱 Project Architecture
+
+The project is composed of three main components:
+
+### 1. Android SDK (Library)
+- Captures UI events from the application
+- Sends events to a REST API
+- Fetches recorded sessions for replay
+- Published as a public library via **JitPack**
+
+### 2. Backend API Service
+- RESTful API implemented with **Flask**
+- Handles CRUD operations for recorded sessions
+- Deployed to the cloud using **Render**
+
+### 3. Database
+- **MongoDB Atlas** (cloud-hosted)
+- Stores sessions, timestamps, screens, and events
+
+---
+
+## ☁️ Cloud Backend
+
+**Base URL:**
+https://ui-state-replay-sdk.onrender.com
+
+### Available Endpoints
+
+- `GET /health` – Health check
+- `POST /sessions` – Create a new session
+- `GET /sessions` – Get recent sessions
+- `GET /sessions/{id}` – Get a specific session with events
+- `PUT /sessions/{id}` – Update a session
+- `DELETE /sessions/{id}` – Delete a session
+
+All data is exchanged in JSON format.
+
+---
+
+## 📦 Installation (via JitPack)
+
+### Step 1: Add JitPack repository
+```gradle
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+dependencies {
+    implementation 'com.github.Mayshabat:ui-state-replay-sdk:v1.0.0'
+}
